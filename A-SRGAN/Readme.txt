@@ -1,0 +1,1 @@
+in this model , in the generator of srgan ,we implemented autoencoder with skip connection instead of residual blocks 
