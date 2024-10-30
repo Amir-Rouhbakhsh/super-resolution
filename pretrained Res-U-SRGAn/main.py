@@ -16,13 +16,13 @@ from tensorflow.image import psnr, ssim
 import numpy as np
 from tensorflow.keras.utils import plot_model
 
-unet_model = load_model(r'H:/GPU/srgan thesis/13-pretrainedunet/unet_with_transferred_weights64.h5')
+unet_model = load_model(r'H:/GPU/srgan thesis/14/unet_with_transferred_weights64.h5')
 
-unet_cut = Model(inputs=unet_model.layers[1].output, outputs=unet_model.layers[59].output)
-
+unet_cut = Model(inputs=unet_model.layers[1].output, outputs=unet_model.layers[95].output)
+#unet_cut = Model(inputs=unet_model.input, outputs=unet_model.layers[95].output)
 unet_cut.summary()
 
-plot_path = r"H:/GPU/srgan thesis/13-pretrainedunet/unet_cut_model.png"
+plot_path = r"H:/GPU/srgan thesis/14/unet_cut_model.png"
 plot_model(unet_cut, to_file=plot_path, show_shapes=True, show_layer_names=True)
 
 print(f"Model architecture saved at {plot_path}")
@@ -37,6 +37,10 @@ def build_unet_srgan_generator(input_shape=(64, 64, 3), num_filters=(64, 128, 25
     """
     Builds the SRGAN generator model using a U-Net architecture.
     """
+    
+    
+    
+    
     # Input Layer (Low-Resolution image)
     input_lr = layers.Input(shape=input_shape)
 
@@ -46,20 +50,21 @@ def build_unet_srgan_generator(input_shape=(64, 64, 3), num_filters=(64, 128, 25
 
     # U-Net Architecture
     skip=x
-    # Scaling from [-1, 1] -> [0, 1] for `unet_cut`
-    x_scaled_for_unet = layers.Lambda(lambda x: (x + 1.0) / 2.0)(x)  # Scale [-1, 1] to [0, 1]
+    
+    
+    
+  
 
     # Pass through the pre-trained U-Net (trained on [0, 1] images)
-    u_net_output = unet_cut(x_scaled_for_unet)
+    u_net_output = unet_cut(x)
 
-    # Scaling back from [0, 1] -> [-1, 1] to match the generator's range
-    u_net_output_scaled_back = layers.Lambda(lambda x: x * 2.0 - 1.0)(u_net_output)
+    
 
     # Post-Residual Convolution + Skip Connection
-    x = layers.Conv2D(64, (3, 3), padding='same')(u_net_output_scaled_back)
+    x = layers.Conv2D(64, (3, 3), padding='same')(u_net_output)
     x = layers.BatchNormalization()(x)
-    x = layers.Add()([skip, x])  # Skip connection after residual blocks
-    #x = layers.Concatenate()([x, skip])  # Concatenation instead of addition
+    #x = layers.Add()([skip, x])  # Skip connection after residual blocks
+    x = layers.Concatenate()([x, skip])  # Concatenation instead of addition
 
     # Upsampling (Pixel Shuffle)
     x = layers.Conv2D(num_filters[2] * 4, (3, 3), padding='same')(x)  # Pixel shuffle needs 4x filters for 2x upsampling
@@ -168,7 +173,7 @@ def generator_loss(vgg, real_img, sr_img, disc_output):
     perceptual_loss = vgg_loss(vgg, real_img, sr_img)
 
     # Adversarial Loss: Encourage the discriminator to classify the SR image as real
-    adversarial_loss = tf.keras.losses.BinaryCrossentropy(from_logits=False)(tf.ones_like(disc_output), disc_output)
+    adversarial_loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)(tf.ones_like(disc_output), disc_output)
     
     pixel_loss = tf.reduce_mean(tf.abs(real_img - sr_img))  # L1 content loss
     
@@ -352,7 +357,7 @@ def generate_sample_images(epoch, lr_images, hr_images, num_samples=1):
         axs[2].axis('off')
 
         # Save the figure
-        sample_dir = 'H:/GPU/srgan thesis/13-pretrainedunet/generated_samples'
+        sample_dir = 'H:/GPU/srgan thesis/14/generated_samples'
         if not os.path.exists(sample_dir):
             os.makedirs(sample_dir)
         plt.savefig(f"{sample_dir}/epoch_{epoch}_sample_{i + 1}.png")
@@ -418,7 +423,7 @@ We log the generator and discriminator losses to TensorBoard using tf.summary.sc
 We log the low-resolution, super-resolved, and high-resolution images to TensorBoard using tf.summary.image().
 '''
 # Set up TensorBoard writer
-log_dir = 'H:/GPU/srgan thesis/13-pretrainedunet/logs'
+log_dir = 'H:/GPU/srgan thesis/14/logs'
 summary_writer = tf.summary.create_file_writer(log_dir)
 
 
@@ -433,7 +438,7 @@ generator = build_unet_srgan_generator()
 discriminator = build_discriminator()
 
 # Define a checkpoint directory to save model weights during training
-checkpoint_dir = 'H:/GPU/srgan thesis/13-pretrainedunet/training_checkpoints'
+checkpoint_dir = 'H:/GPU/srgan thesis/14/training_checkpoints'
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 checkpoint = tf.train.Checkpoint(generator_optimizer=generator_optimizer,
                                  discriminator_optimizer=discriminator_optimizer,
@@ -495,7 +500,7 @@ class CSVLoggerCallback(Callback):
         print(f'Epoch {epoch + 1}: logs saved to {self.csv_path}')
 
 # Path to the CSV file
-csv_path = 'H:/GPU/srgan thesis/13-pretrainedunet/training_logs4x.csv'
+csv_path = 'H:/GPU/srgan thesis/14/training_logs4x.csv'
 csv_logger_callback = CSVLoggerCallback(csv_path)
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -595,10 +600,10 @@ start_time = time.time()
 train(dataset, epochs=5000, vgg=vgg)
 end_time = time.time()
 
-save_path = 'H:/GPU/srgan thesis/13-pretrainedunet/generator_model.h5'
+save_path = 'H:/GPU/srgan thesis/14/generator_model.h5'
 generator.save(save_path)
 print(f"Final generator model saved to {save_path}")
-discriminator.save('H:/GPU/srgan thesis/13-pretrainedunet/discriminator_model.h5')
+discriminator.save('H:/GPU/srgan thesis/14/discriminator_model.h5')
 epoch_duration = end_time - start_time
 hours, remainder = divmod(epoch_duration, 3600)
 minutes, seconds = divmod(remainder, 60)
@@ -639,6 +644,92 @@ discriminator.save('discriminator_model.h5')
 # To load the models back for inference or further training
 generator = tf.keras.models.load_model('generator_model.h5')
 discriminator = tf.keras.models.load_model('discriminator_model.h5')
+
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+import numpy as np
+
+
+
+generator = tf.keras.models.load_model('H:/GPU/srgan thesis/11-unetwithresnet/generator_model.h5')
+
+# Function to evaluate/generate a super-resolved (SR) image
+def evaluate_sr_image(generator, lr_image):
+    sr_image = generator(lr_image, training=False)  # Set training=False for inference
+    sr_image = (sr_image + 1.0) / 2.0  # Rescale to [0, 1] for display
+    return sr_image
+
+from tensorflow.keras.preprocessing.image import array_to_img
+
+# Directory to save the generated high-resolution images
+output_dir = 'H:/GPU/srgan thesis/11-unetwithresnet/generated_hr_images'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
+
+def save_sr_images(generator, dataset, output_dir):
+    """
+    This function generates super-resolved images using the trained generator 
+    and saves them to a specified directory.
+    """
+    # Iterate over the dataset
+    for i, (lr_images, hr_images) in enumerate(dataset):
+        # Generate super-resolved images
+        sr_images = generator(lr_images, training=False)
+        
+        # Rescale the SR images back to [0, 255] for saving as images
+        sr_images = (sr_images + 1.0) / 2.0  # Rescale to [0, 1]
+        sr_images = np.clip(sr_images, 0, 1)  # Ensure pixel values are within [0, 1]
+        
+        # Convert and save each image
+        for j in range(sr_images.shape[0]):
+            sr_image = sr_images[j]
+            sr_image = (sr_image * 255).astype(np.uint8)  # Convert to [0, 255]
+            
+            # Convert the NumPy array to an image
+            img = array_to_img(sr_image)
+            
+            # Save the image to the output directory
+            img.save(os.path.join(output_dir, f'sr_image_{i}_{j}.png'))
+            
+        print(f"Processed and saved batch {i + 1}")
+
+# Load your dataset (use the same dataset loading function as before)
+data_dir = "H:/GPU/srgan thesis/5-Srgan tensorflow/hr_train_LR"
+batch_size = 1
+hr_size = (256, 256)
+dataset = load_dataset(data_dir, batch_size=batch_size, hr_size=hr_size)
+
+# Call the function to process and save SR images
+save_sr_images(generator, dataset, output_dir)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
