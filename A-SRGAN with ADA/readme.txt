@@ -1,0 +1,1 @@
+we used adaptive discriminator augmentation or ADA in A-srgan
