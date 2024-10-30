@@ -1,0 +1,1 @@
+a simple unet replced the residual blocks in the generator of srgan 
