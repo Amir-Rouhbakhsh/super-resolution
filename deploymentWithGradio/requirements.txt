@@ -1,0 +1,4 @@
+torch==1.10.0  # or the version that is compatible with your model
+gradio==3.0  # version of Gradio you want to use
+numpy==1.21.0  # numpy version compatible with PyTorch
+Pillow==8.4.0  # for image processing (PIL)
